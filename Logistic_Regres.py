@@ -66,7 +66,7 @@ def build_model(learning_rate, batch_size, num_epochs):
 
 	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss) # Using the basic Gradient Descent Rule to optimize the model.
 
-	return {"w":w, "b":b, "logits":logits, "entropy":entropy, "loss":loss, "optimizer":optimizer}
+	return {"w":w, "b":b, "logits":logits, "entropy":entropy, "loss":loss, "optimizer":optimizer, "X":X, "Y":Y}
 
 def train_model(regres_model, training_data, training_labels, batch_size, num_epochs):
 	init = tf.global_variables_initializer()
@@ -76,24 +76,39 @@ def train_model(regres_model, training_data, training_labels, batch_size, num_ep
 	sess.run(init)
 	num_batches = int(len(training_data)/batch_size)
 	for i in range(num_epochs):
+		loss = 0
 		for _ in range(num_batches):
-			x_batch = np.random.choice(training_data, size = batch_size, replace = False)
-			y_batch = np.random.choice(training_labels, size = batch_size, replace = False)
-			_, loss = sess.run([optimizer, loss], feed_dict = {X: x_batch, Y:y_batch})
-			print("iteration number : {_}, loss = {loss}".format(_ = _, loss = loss))
-			losses.append(loss)
-		print("epoch number : {i}".format(i = i))
+			idx = np.random.choice(len(training_data), size = batch_size, replace = False)
+			x_batch = training_data[idx]
+			idx = np.random.choice(len(training_labels), size = batch_size, replace = False)
+			y_batch = training_labels[idx]
+			_, temp = sess.run([regres_model["optimizer"], regres_model["loss"]], feed_dict = {regres_model["X"]: x_batch, regres_model["Y"]:y_batch})
+			loss += temp
+		loss /= num_batches
+		print("epoch number : {i}, loss = {loss}".format(i = i + 1, loss = loss))
+		losses.append(loss)
 	return losses, sess
 
 def test_model(regres_model, testing_data, testing_labels, batch_size, sess):
+	total_correct = 0
+	k = 0
 	for x_batch, y_batch in zip(testing_data, testing_labels):
-		_, loss, logits_batch = sess.run([optimizer, loss, logits], feed_dict = {X:x_batch, Y:y_batch})
+		# print(x_batch.shape, x_batch)
+		x_batch = x_batch.reshape((1, len(x_batch)))
+		y_batch = y_batch.reshape((1, len(y_batch)))
+		_, loss, logits_batch = sess.run([regres_model["optimizer"], regres_model["loss"], regres_model["logits"]], feed_dict = {regres_model["X"]:x_batch, regres_model["Y"]:y_batch})
 
 		soft_logits = tf.nn.softmax(logits_batch)
 		predicts_correct = tf.equal(tf.argmax(soft_logits, 1), tf.argmax(y_batch, 1))
 		x = sess.run(predicts_correct)
-		print(x.eval())
-
+		
+		if x[0]:
+			total_correct += 1
+		k += 1
+		if k % 1000 == 0:
+			print("{k} thousandth iteration of testing complete".format(k = k))
+	accuracy = total_correct/len(testing_data)
+	return accuracy
 
 def main():
 	size, rows, cols, training_data, training_labels = read_data("train")
@@ -103,12 +118,15 @@ def main():
 	
 	learning_rate = 0.01
 	batch_size = 128
-	num_epochs = 2
+	num_epochs = 25
 
 	regres_model = build_model(learning_rate, batch_size, num_epochs)
 	print("model built")
 	losses, sess = train_model(regres_model, training_data, training_labels, batch_size, num_epochs)
 	print("model trained")
+	accuracy = test_model(regres_model, testing_data, testing_labels, batch_size, sess)
+	print("model tested. Accuracy = {accuracy}".format(accuracy = accuracy))
+	sess.close()
 
 if __name__ == '__main__':
 	main()
