@@ -13,3 +13,10 @@
 - TensorFlow
 - Numpy
 - MatPlotLib
+- SKLearn
+
+# Loss Function Plot
+
+![alt text](https://github.com/jbnerd/Logistic_Regression_MNIST/blob/master/Loss_function_vs_number_of_epochs.png)
+
+- An accuracy of about 90% was obtained after training.
