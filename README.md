@@ -13,7 +13,6 @@
 - TensorFlow
 - Numpy
 - MatPlotLib
-- SKLearn
 
 # Loss Function Plot
 
